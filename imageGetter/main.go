@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
 
 	"github.com/spf13/viper"
@@ -34,10 +37,23 @@ func main() {
 
 	apiKey, err = GetApiKeyFromConfig("config")
 	if err != nil {
-		fmt.Print("Reead config error:", err)
+		log.Fatal(err)
 		os.Exit(1)
 	}
 
 	fmt.Println("API key is \t", apiKey)
+
+	url := "https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?sol=1000&camera=fhaz&api_key=" + apiKey
+	resp, getErr := http.Get(url)
+	if getErr != nil {
+		log.Fatal(getErr)
+	}
+
+	body, readErr := ioutil.ReadAll(resp.Body)
+	if readErr != nil {
+		log.Fatal(readErr)
+	}
+
+	fmt.Println(string(body))
 
 }
