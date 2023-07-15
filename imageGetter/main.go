@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -36,7 +37,6 @@ func GetApiKeyFromConfig(config string) (string, error) {
 func generateApiUrl(sol int, rover string, camera string, apiKey string) string {
 	baseUrl := "https://api.nasa.gov/mars-photos/api/v1/rovers/"
 	url := baseUrl + rover + "/photos?sol=" + fmt.Sprint(sol) + "&camera=" + camera + "&api_key=" + apiKey
-	fmt.Printf("Url: %s", url)
 	return url
 }
 
@@ -61,6 +61,41 @@ func extractDataFromUrl(url string) (datatype.Data, error) {
 	return dataObj, nil
 }
 
+func downloadFile(url string, filePath string) error {
+	reponse, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer reponse.Body.Close()
+
+	if reponse.StatusCode != http.StatusOK {
+		return fmt.Errorf("invalid status code : %d", reponse.StatusCode)
+	}
+
+	fichierLocal, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer fichierLocal.Close()
+	var s int64
+	s, err = io.Copy(fichierLocal, reponse.Body)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Write %d byte in %s\n", s, filePath)
+	return nil
+}
+
+func generateFileName(rover string, sol int, camera string, id int) string {
+	basePath := "/home/guillaume/Documents/Projet/NASA_ROVER_API_Movie/output/"
+	Path := basePath + rover + "/" + fmt.Sprint(sol) + "/" + camera + "/"
+	err := os.MkdirAll(Path, os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return Path + fmt.Sprint(id) + ".jpg"
+}
+
 func main() {
 	var apiKey string
 	var err error
@@ -79,9 +114,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, value := range dataObj.Data {
-		fmt.Println(value.Rover.Name)
-		fmt.Println(value.ImgSrc)
-		println("")
+	for key, value := range dataObj.Data {
+		File := generateFileName(value.Rover.Name, value.Sol, value.Camera.Name, key)
+		DownErr := downloadFile(value.ImgSrc, File)
+		if DownErr != nil {
+			log.Fatal(DownErr)
+		}
+		fmt.Printf("%s\n", File)
 	}
 }
