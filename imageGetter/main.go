@@ -33,6 +33,34 @@ func GetApiKeyFromConfig(config string) (string, error) {
 	return configuration.ApiKey, nil
 }
 
+func generateApiUrl(sol int, rover string, camera string, apiKey string) string {
+	baseUrl := "https://api.nasa.gov/mars-photos/api/v1/rovers/"
+	url := baseUrl + rover + "/photos?sol=" + fmt.Sprint(sol) + "&camera=" + camera + "&api_key=" + apiKey
+	fmt.Printf("Url: %s", url)
+	return url
+}
+
+func extractDataFromUrl(url string) (datatype.Data, error) {
+	resp, getErr := http.Get(url)
+	dataObj := datatype.Data{}
+
+	if getErr != nil {
+		return dataObj, getErr
+	}
+
+	body, readErr := ioutil.ReadAll(resp.Body)
+	if readErr != nil {
+		return dataObj, readErr
+	}
+
+	jsonErr := json.Unmarshal(body, &dataObj)
+	if jsonErr != nil {
+		return dataObj, jsonErr
+	}
+
+	return dataObj, nil
+}
+
 func main() {
 	var apiKey string
 	var err error
@@ -43,28 +71,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println("API key is \t", apiKey)
+	url := generateApiUrl(999, "curiosity", "fhaz", apiKey)
 
-	url := "https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?sol=1000&camera=fhaz&api_key=" + apiKey
-	resp, getErr := http.Get(url)
-	if getErr != nil {
-		log.Fatal(getErr)
+	dataObj, err := extractDataFromUrl(url)
+
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		log.Fatal(readErr)
-	}
-
-	dataObj := datatype.Data{}
-	jsonErr := json.Unmarshal(body, &dataObj)
-	if jsonErr != nil {
-		log.Fatal(jsonErr)
-	}
-	fmt.Println(dataObj)
-
-	for key, value := range dataObj.Data {
-		fmt.Println(key)
+	for _, value := range dataObj.Data {
 		fmt.Println(value.Rover.Name)
+		fmt.Println(value.ImgSrc)
+		println("")
 	}
 }
