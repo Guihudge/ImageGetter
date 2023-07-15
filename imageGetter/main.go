@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/spf13/viper"
 	conf "guihudge.com/ImageGetter/config"
+	datatype "guihudge.com/ImageGetter/dataType"
 )
 
 func GetApiKeyFromConfig(config string) (string, error) {
@@ -54,6 +56,15 @@ func main() {
 		log.Fatal(readErr)
 	}
 
-	fmt.Println(string(body))
+	dataObj := datatype.Data{}
+	jsonErr := json.Unmarshal(body, &dataObj)
+	if jsonErr != nil {
+		log.Fatal(jsonErr)
+	}
+	fmt.Println(dataObj)
 
+	for key, value := range dataObj.Data {
+		fmt.Println(key)
+		fmt.Println(value.Rover.Name)
+	}
 }
